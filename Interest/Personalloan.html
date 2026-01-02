@@ -25,7 +25,11 @@ body{
   background:var(--bg);
   color:var(--text);
 }
-h1{text-align:center;color:var(--primary);margin:20px 0}
+h1{
+  text-align:center;
+  color:var(--primary);
+  margin:20px 0;
+}
 .container{max-width:1200px;margin:auto;padding:16px}
 .grid{
   display:grid;
@@ -37,12 +41,19 @@ h1{text-align:center;color:var(--primary);margin:20px 0}
   border-radius:var(--radius);
   box-shadow:var(--shadow);
   padding:22px;
-  display:flex;
-  flex-direction:column;
 }
 .section{margin-bottom:16px}
-.section h3{margin:0 0 10px;color:var(--primary)}
-label{font-size:12px;color:var(--muted);display:block;margin-bottom:4px}
+.section h3{
+  margin:0 0 10px;
+  color:var(--primary);
+  font-size:16px;
+}
+label{
+  font-size:12px;
+  color:var(--muted);
+  display:block;
+  margin-bottom:4px;
+}
 input,select{
   width:100%;
   padding:10px;
@@ -65,14 +76,14 @@ button{
   grid-template-columns:repeat(4,1fr);
   gap:14px;
 }
-.result-box{
+.result{
   background:#f8fafc;
   border-radius:12px;
   padding:14px;
   text-align:center;
 }
-.result-box b{font-size:18px;display:block}
-.result-box small{font-size:12px;color:var(--muted)}
+.result b{display:block;font-size:18px}
+.result small{color:var(--muted)}
 
 .chart-grid{
   display:grid;
@@ -91,9 +102,21 @@ button{
   max-height:360px;
   overflow:auto;
 }
-table{width:100%;border-collapse:collapse;font-size:13px}
-thead{background:#f1f5f9;position:sticky;top:0}
-th,td{padding:8px;border-bottom:1px solid var(--border);text-align:right}
+table{
+  width:100%;
+  border-collapse:collapse;
+  font-size:13px;
+}
+thead{
+  background:#f1f5f9;
+  position:sticky;
+  top:0;
+}
+th,td{
+  padding:8px;
+  border-bottom:1px solid var(--border);
+  text-align:right;
+}
 th:first-child,td:first-child{text-align:center}
 
 @media(max-width:900px){
@@ -124,6 +147,7 @@ th:first-child,td:first-child{text-align:center}
 
   <div class="section">
     <h3>Loan Details</h3>
+
     <label>Loan Amount</label>
     <input id="amount" value="20000">
 
@@ -136,7 +160,7 @@ th:first-child,td:first-child{text-align:center}
     <label>Origination Fee</label>
     <input id="fee" value="0">
 
-    <label>Extra Monthly Payment</label>
+    <label>Extra Monthly Payment (Optional)</label>
     <input id="extra" value="0">
   </div>
 
@@ -146,11 +170,12 @@ th:first-child,td:first-child{text-align:center}
 
 <!-- RIGHT -->
 <div class="card">
+
   <div class="results">
-    <div class="result-box"><b id="rPay">–</b><small>Monthly Payment</small></div>
-    <div class="result-box"><b id="rInt">–</b><small>Total Interest</small></div>
-    <div class="result-box"><b id="rTot">–</b><small>Total Cost</small></div>
-    <div class="result-box"><b id="rEnd">–</b><small>Payoff Month</small></div>
+    <div class="result"><b id="rPay">–</b><small>Monthly Payment</small></div>
+    <div class="result"><b id="rInt">–</b><small>Total Interest</small></div>
+    <div class="result"><b id="rTot">–</b><small>Total Cost</small></div>
+    <div class="result"><b id="rEnd">–</b><small>Payoff Month</small></div>
   </div>
 
   <div class="chart-grid">
@@ -175,71 +200,94 @@ th:first-child,td:first-child{text-align:center}
       </table>
     </div>
   </div>
-</div>
 
+</div>
 </div>
 </div>
 
 <script>
-let pie,line;
-function fmt(n){return cur+n.toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g,",");}
-let cur="$";
+let pieChart,lineChart;
+let currencySymbol="$";
 
-function calculate(){
-cur=document.getElementById("currency").value;
-let P=+amount.value + +fee.value;
-let r=(+rate.value/100)/12;
-let n=+months.value;
-let extra=+extra.value;
-
-let emi=(P*r)/(1-Math.pow(1+r,-n));
-let bal=P,rows=[],labels=[],balances=[];
-let totalInt=0,month=0;
-
-while(bal>0 && month<1000){
-  month++;
-  let interest=bal*r;
-  let pay=Math.min(emi+extra,bal+interest);
-  let principal=pay-interest;
-  bal=Math.max(0,bal-principal);
-
-  totalInt+=interest;
-  balances.push(bal);
-  labels.push("M"+month);
-
-  rows.push(`<tr>
-    <td>${month}</td>
-    <td>${fmt(pay)}</td>
-    <td>${fmt(interest)}</td>
-    <td>${fmt(principal)}</td>
-    <td>${fmt(bal)}</td>
-  </tr>`);
+function money(n){
+  return currencySymbol + n.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g,",");
 }
 
-rPay.textContent=fmt(emi);
-rInt.textContent=fmt(totalInt);
-rTot.textContent=fmt(P+totalInt);
-rEnd.textContent="Month "+month;
-table.innerHTML=rows.join("");
+function calculate(){
+currencySymbol=document.getElementById("currency").value;
 
-if(pie)pie.destroy();
-pie=new Chart(pieCanvas,{
+let P = Number(amount.value) + Number(fee.value);
+let annualRate = Number(rate.value)/100;
+let r = annualRate/12;
+let n = Number(months.value);
+let extra = Number(extra.value);
+
+let emi = (r===0) ? P/n : (P*r)/(1-Math.pow(1+r,-n));
+
+let balance=P;
+let totalInterest=0;
+let rows=[];
+let balances=[];
+let labels=[];
+let month=0;
+
+while(balance>0 && month<600){
+  month++;
+  let interest = balance*r;
+  let payment = Math.min(emi + extra, balance + interest);
+  let principal = payment - interest;
+  balance = Math.max(balance - principal,0);
+
+  totalInterest += interest;
+
+  balances.push(balance);
+  labels.push("M"+month);
+
+  rows.push(`
+    <tr>
+      <td>${month}</td>
+      <td>${money(payment)}</td>
+      <td>${money(interest)}</td>
+      <td>${money(principal)}</td>
+      <td>${money(balance)}</td>
+    </tr>
+  `);
+}
+
+rPay.textContent = money(emi);
+rInt.textContent = money(totalInterest);
+rTot.textContent = money(P + totalInterest);
+rEnd.textContent = "Month " + month;
+table.innerHTML = rows.join("");
+
+if(pieChart) pieChart.destroy();
+pieChart = new Chart(document.getElementById("pie"),{
   type:"pie",
   data:{
     labels:["Principal","Interest"],
-    datasets:[{data:[P,totalInt],backgroundColor:["#2563eb","#ef4444"]}]
+    datasets:[{
+      data:[P,totalInterest],
+      backgroundColor:["#2563eb","#ef4444"]
+    }]
   }
 });
 
-if(line)line.destroy();
-line=new Chart(lineCanvas,{
+if(lineChart) lineChart.destroy();
+lineChart = new Chart(document.getElementById("line"),{
   type:"line",
-  data:{labels,datasets:[{label:"Remaining Balance",data:balances,borderColor:"#2563eb",tension:.3}]},
+  data:{
+    labels,
+    datasets:[{
+      label:"Remaining Balance",
+      data:balances,
+      borderColor:"#2563eb",
+      tension:0.3
+    }]
+  },
   options:{maintainAspectRatio:false}
 });
 }
-const pieCanvas=document.getElementById("pie");
-const lineCanvas=document.getElementById("line");
+
 calculate();
 </script>
 </body>
